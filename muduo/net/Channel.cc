@@ -21,7 +21,7 @@ const int Channel::kNoneEvent = 0;
 const int Channel::kReadEvent = POLLIN | POLLPRI;
 const int Channel::kWriteEvent = POLLOUT;
 
-Channel::Channel(EventLoop* loop, int fd__)
+Channel::Channel(EventLoop* loop, int fd__, SSL_CTX *ctx)
   : loop_(loop),
     fd_(fd__),
     events_(0),
@@ -30,8 +30,15 @@ Channel::Channel(EventLoop* loop, int fd__)
     logHup_(true),
     tied_(false),
     eventHandling_(false),
-    addedToLoop_(false)
+    addedToLoop_(false),
+    ctx_(ctx),
+	sslAccepted(false)
 {
+  if (ctx_)
+  {
+    ssl_ = ssl::sslNew(ctx_);
+    ssl::sslSetfd(ssl_, fd__);
+  }
 }
 
 Channel::~Channel()
@@ -41,6 +48,10 @@ Channel::~Channel()
   if (loop_->isInLoopThread())
   {
     assert(!loop_->hasChannel(this));
+  }
+  if(ctx_)
+  {
+    ssl::sslFree(ssl_);
   }
 }
 

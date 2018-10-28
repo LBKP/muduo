@@ -12,6 +12,7 @@
 #define MUDUO_NET_CHANNEL_H
 
 #include <muduo/base/Timestamp.h>
+#include <muduo/net/openssl.h>
 
 #include <functional>
 #include <memory>
@@ -31,11 +32,11 @@ class EventLoop;
 /// an eventfd, a timerfd, or a signalfd
 class Channel : noncopyable
 {
- public:
+public:
   typedef std::function<void()> EventCallback;
   typedef std::function<void(Timestamp)> ReadEventCallback;
 
-  Channel(EventLoop* loop, int fd);
+  Channel(EventLoop *loop, int fd, SSL_CTX* ctx = nullptr);
   ~Channel();
 
   void handleEvent(Timestamp receiveTime);
@@ -53,6 +54,7 @@ class Channel : noncopyable
   void tie(const std::shared_ptr<void>&);
 
   int fd() const { return fd_; }
+  SSL* ssl() const { return ssl_; };
   int events() const { return events_; }
   void set_revents(int revt) { revents_ = revt; } // used by pollers
   // int revents() const { return revents_; }
@@ -74,12 +76,16 @@ class Channel : noncopyable
   string reventsToString() const;
   string eventsToString() const;
 
+  //ssl
+  void setSslAccpeted(bool accpted) { sslAccepted = accpted; };
+  bool getSslAccpeted() { return sslAccepted; };
+
   void doNotLogHup() { logHup_ = false; }
 
-  EventLoop* ownerLoop() { return loop_; }
+  EventLoop *ownerLoop() { return loop_; }
   void remove();
 
- private:
+private:
   static string eventsToString(int fd, int ev);
 
   void update();
@@ -89,12 +95,12 @@ class Channel : noncopyable
   static const int kReadEvent;
   static const int kWriteEvent;
 
-  EventLoop* loop_;
-  const int  fd_;
-  int        events_;
-  int        revents_; // it's the received event types of epoll or poll
-  int        index_; // used by Poller.
-  bool       logHup_;
+  EventLoop *loop_;
+  const int fd_;
+  int events_;
+  int revents_; // it's the received event types of epoll or poll
+  int index_;   // used by Poller.
+  bool logHup_;
 
   std::weak_ptr<void> tie_;
   bool tied_;
@@ -104,8 +110,13 @@ class Channel : noncopyable
   EventCallback writeCallback_;
   EventCallback closeCallback_;
   EventCallback errorCallback_;
+
+  SSL_CTX *ctx_;
+  SSL *ssl_;
+  bool sslAccepted;
 };
 
-}
-}
-#endif  // MUDUO_NET_CHANNEL_H
+} // namespace net
+} // namespace muduo
+
+#endif // MUDUO_NET_CHANNEL_H

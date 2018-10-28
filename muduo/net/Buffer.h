@@ -16,6 +16,7 @@
 #include <muduo/base/Types.h>
 
 #include <muduo/net/Endian.h>
+#include <muduo/net/openssl.h>
 
 #include <algorithm>
 #include <vector>
@@ -377,7 +378,7 @@ class Buffer : public muduo::copyable
   ///
   /// It may implement with readv(2)
   /// @return result of read(2), @c errno is saved
-  ssize_t readFd(int fd, int* savedErrno);
+  ssize_t readFd(int fd, int* savedErrno, SSL* ssl);
 
  private:
 
@@ -416,7 +417,7 @@ class Buffer : public muduo::copyable
   static const char kCRLF[];
 };
 
-}
-}
+}  // namespace net
+}  // namespace muduo
 
 #endif  // MUDUO_NET_BUFFER_H

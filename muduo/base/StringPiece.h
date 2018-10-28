@@ -41,6 +41,7 @@
 #define MUDUO_BASE_STRINGPIECE_H
 
 #include <string_view>
+#include <string>
 
 #include <muduo/base/Types.h>
 

@@ -14,6 +14,7 @@ set(net_SRCS
   EventLoopThread.cc
   EventLoopThreadPool.cc
   InetAddress.cc
+  openssl.cpp
   Poller.cc
   poller/DefaultPoller.cc
   poller/EPollPoller.cc
@@ -28,7 +29,7 @@ set(net_SRCS
   )
 
 add_library(muduo_net ${net_SRCS})
-target_link_libraries(muduo_net muduo_base)
+target_link_libraries(muduo_net muduo_base ssl crypto)
 
 #add_library(muduo_net_cpp11 ${net_SRCS})
 #target_link_libraries(muduo_net_cpp11 muduo_base_cpp11)
@@ -46,6 +47,7 @@ set(HEADERS
   EventLoopThread.h
   EventLoopThreadPool.h
   InetAddress.h
+  openssl.h
   TcpClient.h
   TcpConnection.h
   TcpServer.h
@@ -54,6 +56,7 @@ set(HEADERS
 install(FILES ${HEADERS} DESTINATION include/muduo/net)
 
 add_subdirectory(http)
+add_subdirectory(websocket)
 add_subdirectory(inspect)
 
 if(NOT CMAKE_BUILD_NO_EXAMPLES)

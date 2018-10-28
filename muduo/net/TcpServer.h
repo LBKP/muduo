@@ -14,8 +14,11 @@
 #include <muduo/base/Atomic.h>
 #include <muduo/base/Types.h>
 #include <muduo/net/TcpConnection.h>
-
+#include <muduo/net/openssl.h>
 #include <map>
+
+
+#include <memory>
 
 namespace muduo
 {
@@ -44,7 +47,8 @@ class TcpServer : noncopyable
   TcpServer(EventLoop* loop,
             const InetAddress& listenAddr,
             const string& nameArg,
-            Option option = kNoReusePort);
+            Option option = kNoReusePort,
+            ssl::sslAttrivutesPtr sslAttributes = ssl::sslAttrivutesPtr());
   ~TcpServer();  // force out-line dtor, for std::unique_ptr members.
 
   const string& ipPort() const { return ipPort_; }
@@ -112,9 +116,12 @@ class TcpServer : noncopyable
   // always in loop thread
   int nextConnId_;
   ConnectionMap connections_;
+  //openssl is open
+  bool openSsl_;
+  ssl::sslAttrivutesPtr sslAttributes_;
 };
 
-}
-}
+}  // namespace net
+}  // namespace muduo
 
 #endif  // MUDUO_NET_TCPSERVER_H

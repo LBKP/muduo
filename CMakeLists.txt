@@ -28,6 +28,8 @@ set(CXX_FLAGS
  # -MMD
  -std=c++17
  -rdynamic
+ -lssl
+ -lcrypto
  )
 if(CMAKE_BUILD_BITS EQUAL 32)
   list(APPEND CXX_FLAGS "-m32")

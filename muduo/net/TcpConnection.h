@@ -16,7 +16,7 @@
 #include <muduo/net/Callbacks.h>
 #include <muduo/net/Buffer.h>
 #include <muduo/net/InetAddress.h>
-
+#include <muduo/net/openssl.h>
 #include <any>
 #include <memory>
 
@@ -47,7 +47,8 @@ class TcpConnection : noncopyable,
                 const string& name,
                 int sockfd,
                 const InetAddress& localAddr,
-                const InetAddress& peerAddr);
+                const InetAddress& peerAddr,
+                ssl::sslAttrivutesPtr sslAttr = ssl::sslAttrivutesPtr());
   ~TcpConnection();
 
   EventLoop* getLoop() const { return loop_; }
@@ -149,11 +150,14 @@ class TcpConnection : noncopyable,
   std::any context_;
   // FIXME: creationTime_, lastReceiveTime_
   //        bytesReceived_, bytesSent_
+
+  //openssl optional
+  ssl::sslAttrivutesPtr sslAttr_;
 };
 
 typedef std::shared_ptr<TcpConnection> TcpConnectionPtr;
 
-}
-}
+}  // namespace net
+}  // namespace muduo
 
 #endif  // MUDUO_NET_TCPCONNECTION_H
