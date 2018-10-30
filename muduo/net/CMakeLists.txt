@@ -14,7 +14,7 @@ set(net_SRCS
   EventLoopThread.cc
   EventLoopThreadPool.cc
   InetAddress.cc
-  openssl.cpp
+  Openssl.cpp
   Poller.cc
   poller/DefaultPoller.cc
   poller/EPollPoller.cc
@@ -47,7 +47,7 @@ set(HEADERS
   EventLoopThread.h
   EventLoopThreadPool.h
   InetAddress.h
-  openssl.h
+  Openssl.h
   TcpClient.h
   TcpConnection.h
   TcpServer.h

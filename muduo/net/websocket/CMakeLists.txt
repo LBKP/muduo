@@ -1,6 +1,7 @@
 set(wss_SRCS
-  websocketcontext.cpp
-  websocketserver.cpp
+  WebSocketContext.cpp
+  WebSocketServer.cpp
+  WebSocketConnection.cpp
   )
 
 add_library(muduo_wss ${wss_SRCS})
@@ -8,8 +9,9 @@ target_link_libraries(muduo_wss muduo_net)
 
 install(TARGETS muduo_wss DESTINATION lib)
 set(HEADERS
-  websocketcontext.h
-  websocketserver.h
+  WebSocketContext.h
+  WebSocketServer.h
+  WebSocketConnection.h
   )
 install(FILES ${HEADERS} DESTINATION include/muduo/net/websocket)
 
