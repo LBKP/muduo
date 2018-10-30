@@ -15,16 +15,25 @@ class WebSocketConnection
 	  public std::enable_shared_from_this<WebSocketConnection>
 {
   public:
+	  enum Opcode : char
+	  {
+		  CONTINUATION_FRAME,
+		  TEXT_FRAME,
+		  BINARY_FRAME,
+		  CONNECTION_CLOSE_FRAME = 0X8,
+		  PING_FRAME,
+		  PONG_FRAME,
+	  };
 	WebSocketConnection(const TcpConnectionPtr &conn);
 	~WebSocketConnection();
 	bool connected() const;
 	bool disconnected() const;
 
 	// void send
-	void send(const void *message, int len){};
-	void send(const StringPiece &message){};
+	void send(const void *message, int64_t len, Opcode frame);
+	void send(const StringPiece &message, Opcode frame);
 	// void send buffer
-	void send(Buffer *message){};
+	void send(Buffer *message, Opcode frame);
 
 	// prease message
 	bool preaseMessage(Buffer *buf, Timestamp receiveTime);
@@ -46,15 +55,6 @@ class WebSocketConnection
 	void fetchPayload( Buffer *buf);
 	struct WebSocketHeader
 	{
-		enum Opcode : char
-		{
-			CONTINUATION_FRAME,
-			TEXT_FRAME,
-			BINARY_FRAME,
-			CONNECTION_CLOSE_FRAME = 0X8,
-			PING_FRAME,
-			PONG_FRAME,
-		};
 		bool fin;
 		int opcode;
 		bool mask;
@@ -72,7 +72,6 @@ class WebSocketConnection
 	std::weak_ptr<TcpConnection> connection_;
 	Buffer recivedBuf_;
 	WebSocketMessageCallback onMessageCallback_;
-	WebSocketHeader sendHeader_;
 	WebSocketHeader receiveHeader_;
 };
 } // namespace wss

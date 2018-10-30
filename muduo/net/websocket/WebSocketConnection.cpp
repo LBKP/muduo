@@ -23,6 +23,51 @@ bool WebSocketConnection::disconnected() const
 		return conn->disconnected();
 }
 
+void WebSocketConnection::send(const void * message, int64_t len, Opcode frame)
+{
+	uint8_t payloadExternBytes, payload;
+	if (len > 32767)
+	{
+		payloadExternBytes = 8;
+		payload = 127;
+	}
+	else if (len >= 126)
+	{
+		payloadExternBytes = 2;
+		payload = 126;
+	}
+	else
+	{
+		payloadExternBytes = 0;
+		payload = len;
+	}
+
+	Buffer buf;
+	buf.append(&static_cast<char>(0X80 | frame), 1);
+	buf.append(&static_cast<char>(len), 1);
+	if (payloadExternBytes == 2)
+	{	
+		buf.append(&static_cast<char>(sockets::hostToNetwork16(static_cast<uint16_t>(len))), 2);
+	}
+	else if (payloadExternBytes == 8)
+	{
+		buf.append(&static_cast<char>(sockets::hostToNetwork64(static_cast<uint64_t>(len))), 8);
+	}
+	buf.append(message, len);
+	LOG_DEBUG<<buf.
+	auto conn = connection_.lock();
+	if (conn)
+		return conn->send(&buf);
+}
+
+void WebSocketConnection::send(const StringPiece & message, Opcode frame)
+{
+}
+
+void WebSocketConnection::send(Buffer * message, Opcode frame)
+{
+}
+
 bool WebSocketConnection::preaseMessage(Buffer *buf, Timestamp receiveTime)
 {
 	if (receiveHeader_.preaseDown && buf->readableBytes() < 2)
@@ -33,13 +78,13 @@ bool WebSocketConnection::preaseMessage(Buffer *buf, Timestamp receiveTime)
 		if (!fecthOpcode(buf))
 			return false;
 		fetchMask(buf);
-		fetchMaskingKey(buf);
 		if (!fetchPayloadLength(buf))
 			return false;
+		fetchPayload(buf);
 	}
 	LOG_DEBUG << "fin " << receiveHeader_.fin << " opcode " << receiveHeader_.opcode
-			  << " maske " << receiveHeader_.mask << " payload "
-			  << receiveHeader_.payload;
+		<< " maske " << receiveHeader_.mask << " payload "
+		<< receiveHeader_.payload;
 
 	receiveHeader_.preaseDown = true;
 	onMessageCallback_(shared_from_this(), &recivedBuf_, receiveTime);
@@ -69,7 +114,7 @@ void WebSocketConnection::forceCloseWithDelay(double secondes)
 void WebSocketConnection::fetchFIN(Buffer *buf)
 {
 	const char *data = buf->peek();
-	receiveHeader_.fin = std::reinterpret_cast<unsigned char *>(data)[0] >> 7;
+	receiveHeader_.fin = data[0] & 0x80;
 }
 
 bool WebSocketConnection::fecthOpcode(Buffer *buf)
@@ -80,7 +125,7 @@ bool WebSocketConnection::fecthOpcode(Buffer *buf)
 		receiveHeader_.opcode != WebSocketHeader::Opcode::BINARY_FRAME)
 	{
 		LOG_ERROR << "The opcode is" << receiveHeader_.opcode
-				  << " will be retrieve all";
+			<< " will be retrieve all";
 		buf->retrieveAll();
 		return false;
 	}
@@ -90,21 +135,9 @@ bool WebSocketConnection::fecthOpcode(Buffer *buf)
 void WebSocketConnection::fetchMask(Buffer *buf)
 {
 	const char *data = buf->peek();
-	receiveHeader_.mask = std::reinterpret_cast<unsigned char *>(data)[0] >> 7;
+	receiveHeader_.mask = data[0] & 0x80;
 }
 
-void WebSocketConnection::fetchMaskingKey(Buffer *buf)
-{
-	if (receiveHeader_.mask)
-	{
-		const char *data = buf->peek();
-		for (size_t i = 0; i < 4; i++)
-		{
-			receiveHeader_.maskKey[i] = data[i];
-		}
-		buf->retrieve(4);
-	}
-}
 
 bool WebSocketConnection::fetchPayloadLength(Buffer *buf)
 {
@@ -126,15 +159,21 @@ bool WebSocketConnection::fetchPayloadLength(Buffer *buf)
 		buf->retrieve(8);
 		receiveHeader_.payload = sockets::networkToHost64(length);
 	}
-	else
-	{
-		LOG_ERROR << "Can not prease the header will be retrieve all";
-		buf->retrieveAll();
-		return false;
-	}
-	reutrn true;
+	return true;
 }
 
+void WebSocketConnection::fetchMaskingKey(Buffer *buf)
+{
+	if (receiveHeader_.mask)
+	{
+		const char *data = buf->peek();
+		for (size_t i = 0; i < 4; i++)
+		{
+			receiveHeader_.maskKey[i] = data[i];
+		}
+		buf->retrieve(4);
+	}
+}
 void WebSocketConnection::fetchPayload(Buffer *buf)
 {
 	if (receiveHeader_.mask == 0)
@@ -143,11 +182,13 @@ void WebSocketConnection::fetchPayload(Buffer *buf)
 	}
 	else
 	{
+		fetchMaskingKey(buf);
 		string message = buf->retrieveAsString(receiveHeader_.payload);
 		for (size_t i = 0; i < message.size(); i++)
 		{
 			int j = i % 4;
-			recivedBuf_.append(message[i] ^ receiveHeader_.maskKey[j], 1);
+			char val = message[i] ^ receiveHeader_.maskKey[j];
+			recivedBuf_.append(&val, 1);
 		}
 	}
 }

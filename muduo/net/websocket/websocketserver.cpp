@@ -76,6 +76,7 @@ void WebSocketServer::defaultOnMessageCallback(WebSocketPtr websocket,
 											   Buffer *buf,
 											   Timestamp receiveTime)
 {
+	buf->append('\0');
 	LOG_INFO << "recived message " << buf->retrieveAllAsString();
 }
 } // namespace wss
