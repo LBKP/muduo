@@ -23,7 +23,7 @@ bool WebSocketConnection::disconnected() const
 		return conn->disconnected();
 }
 
-void WebSocketConnection::send(const void * message, int64_t len, Opcode frame)
+void WebSocketConnection::send(const void *message, int64_t len, WebSocketConnection::Opcode frame)
 {
 	uint8_t payloadExternBytes, payload;
 	if (len > 32767)
@@ -39,33 +39,35 @@ void WebSocketConnection::send(const void * message, int64_t len, Opcode frame)
 	else
 	{
 		payloadExternBytes = 0;
-		payload = len;
+		payload = static_cast<uint8_t>(len);
 	}
 
 	Buffer buf;
-	buf.append(&static_cast<char>(0X80 | frame), 1);
-	buf.append(&static_cast<char>(len), 1);
+	buf.appendInt8(0X80 | frame);
+	buf.appendInt8(len);
 	if (payloadExternBytes == 2)
-	{	
-		buf.append(&static_cast<char>(sockets::hostToNetwork16(static_cast<uint16_t>(len))), 2);
+	{
+		buf.appendInt16(/*sockets::hostToNetwork16(*/static_cast<uint16_t>(len)/*)*/);
 	}
 	else if (payloadExternBytes == 8)
 	{
-		buf.append(&static_cast<char>(sockets::hostToNetwork64(static_cast<uint64_t>(len))), 8);
+		buf.appendInt64(len);
 	}
 	buf.append(message, len);
-	LOG_DEBUG<<buf.
+	LOG_DEBUG << buf.peek();
 	auto conn = connection_.lock();
 	if (conn)
 		return conn->send(&buf);
 }
 
-void WebSocketConnection::send(const StringPiece & message, Opcode frame)
+void WebSocketConnection::send(const StringPiece &message, WebSocketConnection::Opcode frame)
 {
+	send(message.data(), message.length(), frame);
 }
 
-void WebSocketConnection::send(Buffer * message, Opcode frame)
+void WebSocketConnection::send(Buffer *message, WebSocketConnection::Opcode frame)
 {
+	send(message->peek(), message->readableBytes(), frame);
 }
 
 bool WebSocketConnection::preaseMessage(Buffer *buf, Timestamp receiveTime)
@@ -121,8 +123,8 @@ bool WebSocketConnection::fecthOpcode(Buffer *buf)
 {
 	receiveHeader_.opcode = *(buf->peek()) & 0x0F;
 	buf->retrieve(1);
-	if (receiveHeader_.opcode != WebSocketHeader::Opcode::TEXT_FRAME &&
-		receiveHeader_.opcode != WebSocketHeader::Opcode::BINARY_FRAME)
+	if (receiveHeader_.opcode != Opcode::TEXT_FRAME &&
+		receiveHeader_.opcode != Opcode::BINARY_FRAME)
 	{
 		LOG_ERROR << "The opcode is" << receiveHeader_.opcode
 			<< " will be retrieve all";

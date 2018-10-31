@@ -15,25 +15,25 @@ class WebSocketConnection
 	  public std::enable_shared_from_this<WebSocketConnection>
 {
   public:
-	  enum Opcode : char
-	  {
-		  CONTINUATION_FRAME,
-		  TEXT_FRAME,
-		  BINARY_FRAME,
-		  CONNECTION_CLOSE_FRAME = 0X8,
-		  PING_FRAME,
-		  PONG_FRAME,
-	  };
+	enum Opcode : char
+	{
+		CONTINUATION_FRAME,
+		TEXT_FRAME,
+		BINARY_FRAME,
+		CONNECTION_CLOSE_FRAME = 0X8,
+		PING_FRAME,
+		PONG_FRAME,
+	};
 	WebSocketConnection(const TcpConnectionPtr &conn);
 	~WebSocketConnection();
 	bool connected() const;
 	bool disconnected() const;
 
 	// void send
-	void send(const void *message, int64_t len, Opcode frame);
-	void send(const StringPiece &message, Opcode frame);
+	void send(const void *message, int64_t len, WebSocketConnection::Opcode frame);
+	void send(const StringPiece &message, WebSocketConnection::Opcode frame);
 	// void send buffer
-	void send(Buffer *message, Opcode frame);
+	void send(Buffer *message, WebSocketConnection::Opcode frame);
 
 	// prease message
 	bool preaseMessage(Buffer *buf, Timestamp receiveTime);
@@ -47,12 +47,12 @@ class WebSocketConnection
 	}
 
   private:
-	void fetchFIN( Buffer *buf);
-	bool fecthOpcode( Buffer *buf);
-	void fetchMask( Buffer *buf);
-	void fetchMaskingKey( Buffer *buf);
-	bool fetchPayloadLength( Buffer *buf);
-	void fetchPayload( Buffer *buf);
+	void fetchFIN(Buffer *buf);
+	bool fecthOpcode(Buffer *buf);
+	void fetchMask(Buffer *buf);
+	void fetchMaskingKey(Buffer *buf);
+	bool fetchPayloadLength(Buffer *buf);
+	void fetchPayload(Buffer *buf);
 	struct WebSocketHeader
 	{
 		bool fin;
