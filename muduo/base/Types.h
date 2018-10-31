@@ -20,7 +20,6 @@
 ///
 namespace muduo
 {
-#define MUDUO_STD_STRING
 #ifdef MUDUO_STD_STRING
 using std::string;
 #else  // !MUDUO_STD_STRING

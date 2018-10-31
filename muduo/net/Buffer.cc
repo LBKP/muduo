@@ -39,7 +39,7 @@ ssize_t Buffer::readFd(int fd, int* savedErrno, SSL* ssl = nullptr)
 	if (ssl)
 	{
 		char buf[16384];
-		size_t ires = 0;
+		int ires = 0;
 		while (true)
 		{
 			ires = ssl::sslRead(ssl, buf + n, 16384);
@@ -49,7 +49,7 @@ ssize_t Buffer::readFd(int fd, int* savedErrno, SSL* ssl = nullptr)
 				if (n >= 16384)
 					break;
 			}
-			if (SSL_get_error(ssl, NULL) == SSL_ERROR_NONE)
+			if (SSL_get_error(ssl, 0) == SSL_ERROR_NONE)
 			{
 				continue;
 			}
@@ -60,8 +60,8 @@ ssize_t Buffer::readFd(int fd, int* savedErrno, SSL* ssl = nullptr)
 		}
 		if (n > 0)
 		{
-			memcpy(vec[0].iov_base, buf, n > vec[0].iov_len ? vec[0].iov_len : n);
-			if (n > vec[0].iov_len)
+			memcpy(vec[0].iov_base, buf, n > implicit_cast<ssize_t>(vec[0].iov_len) ? vec[0].iov_len : n);
+			if (n > implicit_cast<ssize_t>(vec[0].iov_len))
 				memcpy(vec[1].iov_base, buf + vec[0].iov_len, n - vec[0].iov_len);
 		}
 	}

@@ -1,39 +1,28 @@
 #pragma once
 #include <memory>
 #include <muduo/net/TcpConnection.h>
+#include <muduo/net/websocket/WebSocketTypes.h>
 
 namespace muduo::net
 {
+class Buffer;
 namespace wss
 {
-class WebSocketConnection;
-typedef std::shared_ptr<WebSocketConnection> WebSocketPtr;
-typedef std::function<void(WebSocketPtr, Buffer *buf, Timestamp receiveTime)>
-	WebSocketMessageCallback;
 class WebSocketConnection
 	: noncopyable,
 	  public std::enable_shared_from_this<WebSocketConnection>
 {
   public:
-	enum Opcode : char
-	{
-		CONTINUATION_FRAME,
-		TEXT_FRAME,
-		BINARY_FRAME,
-		CONNECTION_CLOSE_FRAME = 0X8,
-		PING_FRAME,
-		PONG_FRAME,
-	};
 	WebSocketConnection(const TcpConnectionPtr &conn);
 	~WebSocketConnection();
 	bool connected() const;
 	bool disconnected() const;
 
 	// void send
-	void send(const void *message, int64_t len, WebSocketConnection::Opcode frame);
-	void send(const StringPiece &message, WebSocketConnection::Opcode frame);
+	void send(const void *message, int64_t len, Opcode frame);
+	void send(const StringPiece &message, Opcode frame);
 	// void send buffer
-	void send(Buffer *message, WebSocketConnection::Opcode frame);
+	void send(Buffer *message, Opcode frame);
 
 	// prease message
 	bool preaseMessage(Buffer *buf, Timestamp receiveTime);

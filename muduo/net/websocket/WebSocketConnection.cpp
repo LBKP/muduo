@@ -14,6 +14,7 @@ bool WebSocketConnection::connected() const
 	auto conn = connection_.lock();
 	if (conn)
 		return conn->connected();
+	return false;
 }
 
 bool WebSocketConnection::disconnected() const
@@ -21,9 +22,10 @@ bool WebSocketConnection::disconnected() const
 	auto conn = connection_.lock();
 	if (conn)
 		return conn->disconnected();
+	return false;
 }
 
-void WebSocketConnection::send(const void *message, int64_t len, WebSocketConnection::Opcode frame)
+void WebSocketConnection::send(const void *message, int64_t len, Opcode frame)
 {
 	uint8_t payloadExternBytes, payload;
 	if (len > 32767)
@@ -43,8 +45,8 @@ void WebSocketConnection::send(const void *message, int64_t len, WebSocketConnec
 	}
 
 	Buffer buf;
-	buf.appendInt8(0X80 | frame);
-	buf.appendInt8(len);
+	buf.appendInt8(static_cast<int8_t>(0X80 | frame));
+	buf.appendInt8(payload);
 	if (payloadExternBytes == 2)
 	{
 		buf.appendInt16(/*sockets::hostToNetwork16(*/static_cast<uint16_t>(len)/*)*/);
@@ -60,12 +62,12 @@ void WebSocketConnection::send(const void *message, int64_t len, WebSocketConnec
 		return conn->send(&buf);
 }
 
-void WebSocketConnection::send(const StringPiece &message, WebSocketConnection::Opcode frame)
+void WebSocketConnection::send(const StringPiece &message, Opcode frame)
 {
 	send(message.data(), message.length(), frame);
 }
 
-void WebSocketConnection::send(Buffer *message, WebSocketConnection::Opcode frame)
+void WebSocketConnection::send(Buffer *message, Opcode frame)
 {
 	send(message->peek(), message->readableBytes(), frame);
 }
@@ -82,15 +84,18 @@ bool WebSocketConnection::preaseMessage(Buffer *buf, Timestamp receiveTime)
 		fetchMask(buf);
 		if (!fetchPayloadLength(buf))
 			return false;
-		fetchPayload(buf);
+		receiveHeader_.preaseDown = false;
 	}
-	LOG_DEBUG << "fin " << receiveHeader_.fin << " opcode " << receiveHeader_.opcode
+	fetchPayload(buf);
+	LOG_INFO << "fin " << receiveHeader_.fin << " opcode " << receiveHeader_.opcode
 		<< " maske " << receiveHeader_.mask << " payload "
 		<< receiveHeader_.payload;
 
-	receiveHeader_.preaseDown = true;
-	onMessageCallback_(shared_from_this(), &recivedBuf_, receiveTime);
-	return true;
+	if (receiveHeader_.preaseDown && receiveHeader_.fin)
+		onMessageCallback_(shared_from_this(), &recivedBuf_, receiveTime);
+	if (receiveHeader_.preaseDown)
+		memset(receiveHeader_.maskKey, 0, 4);
+	return receiveHeader_.preaseDown;
 }
 
 void WebSocketConnection::shutdown()
@@ -122,7 +127,6 @@ void WebSocketConnection::fetchFIN(Buffer *buf)
 bool WebSocketConnection::fecthOpcode(Buffer *buf)
 {
 	receiveHeader_.opcode = *(buf->peek()) & 0x0F;
-	buf->retrieve(1);
 	if (receiveHeader_.opcode != Opcode::TEXT_FRAME &&
 		receiveHeader_.opcode != Opcode::BINARY_FRAME)
 	{
@@ -137,31 +141,40 @@ bool WebSocketConnection::fecthOpcode(Buffer *buf)
 void WebSocketConnection::fetchMask(Buffer *buf)
 {
 	const char *data = buf->peek();
-	receiveHeader_.mask = data[0] & 0x80;
+	receiveHeader_.mask = data[1] & 0x80;
 }
 
 
 bool WebSocketConnection::fetchPayloadLength(Buffer *buf)
 {
 	const char *data = buf->peek();
-	receiveHeader_.payload = data[0] & 0x7F;
-	data++;
-	buf->retrieve(1);
-	if (receiveHeader_.payload == 126)
+	receiveHeader_.payload = data[1] & 0x7F;
+	if (receiveHeader_.payload < 126)
 	{
-		uint16_t length = 0;
-		memcpy(&length, data, 2);
 		buf->retrieve(2);
-		receiveHeader_.payload = sockets::networkToHost16(length);
+		return true;
 	}
-	else if (receiveHeader_.payload == 127)
+	if (receiveHeader_.payload == 126 && buf->readableBytes() >= 4)
 	{
-		uint64_t length = 0;
-		memcpy(&length, data, 8);
-		buf->retrieve(8);
-		receiveHeader_.payload = sockets::networkToHost64(length);
+		//buf->retrieve(2);
+		uint16_t length = 0;
+		memcpy(&length, &data[2], 2);
+		buf->retrieve(4);
+		receiveHeader_.payload = sockets::networkToHost16(length);
+		return true;
 	}
-	return true;
+	else if (receiveHeader_.payload == 127 && buf->readableBytes() >= 10)
+	{
+		//buf->retrieve(2);
+		uint64_t length = 0;
+		memcpy(&length, &data[2], 8);
+		buf->retrieve(10);
+		receiveHeader_.payload = sockets::networkToHost64(length);
+		return true;
+	}
+
+	return false;
+
 }
 
 void WebSocketConnection::fetchMaskingKey(Buffer *buf)
@@ -178,20 +191,49 @@ void WebSocketConnection::fetchMaskingKey(Buffer *buf)
 }
 void WebSocketConnection::fetchPayload(Buffer *buf)
 {
+	bool down = false;
+	size_t readable = buf->readableBytes();
 	if (receiveHeader_.mask == 0)
 	{
-		recivedBuf_.append(buf->retrieveAsString(receiveHeader_.payload));
+		if (receiveHeader_.payload <= readable)
+		{
+			recivedBuf_.append(buf->retrieveAsString(receiveHeader_.payload));
+			down = true;
+		}
+		else
+		{
+			receiveHeader_.payload -= readable;
+			recivedBuf_.append(buf->retrieveAsString(readable));
+		}
 	}
 	else
 	{
-		fetchMaskingKey(buf);
-		string message = buf->retrieveAsString(receiveHeader_.payload);
+		if (std::equal(receiveHeader_.maskKey, receiveHeader_.maskKey + 4, "\0\0\0\0"))
+		{
+			if (buf->readableBytes() >= 4)
+				fetchMaskingKey(buf);
+			else
+				return;
+		}
+		string message;
+		if (receiveHeader_.payload <= readable)
+		{
+			message = buf->retrieveAsString(receiveHeader_.payload);
+			down = true;
+		}
+		else
+		{
+			receiveHeader_.payload -= readable;
+			message = buf->retrieveAsString(readable);
+		}
 		for (size_t i = 0; i < message.size(); i++)
 		{
 			int j = i % 4;
 			char val = message[i] ^ receiveHeader_.maskKey[j];
 			recivedBuf_.append(&val, 1);
 		}
+
+		receiveHeader_.preaseDown = down;
 	}
 }
 

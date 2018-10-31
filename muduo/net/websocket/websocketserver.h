@@ -4,6 +4,7 @@
 #include <muduo/net/Openssl.h>
 #include <muduo/net/TcpServer.h>
 #include <muduo/net/websocket/WebSocketContext.h>
+#include <muduo/net/websocket/WebSocketTypes.h>
 #include <string>
 
 namespace muduo
@@ -39,8 +40,8 @@ private:
 									 const WebSocketContext *context);
 	static void defaultOnMessageCallback(WebSocketPtr websocket, Buffer *buf, Timestamp receiveTime);
 
-	WebSocketMessageCallback onMessageCallback_;
 	TcpServer tcpServer_;
+	WebSocketMessageCallback onMessageCallback_;
 };
 } // namespace wss
 } // namespace net

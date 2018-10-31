@@ -157,7 +157,7 @@ void TcpConnection::sendInLoop(const void* data, size_t len)
 	{
 		if (sslAttr_)
 		{
-			nwrote = ssl::sslSend(channel_->ssl(), data, len);
+			nwrote = ssl::sslSend(channel_->ssl(), data, static_cast<int>(len));
 		}
 		else
 		{
@@ -381,27 +381,21 @@ void TcpConnection::handleRead(Timestamp receiveTime)
 	}
 	else
 	{
-		LOG_INFO << channel_->ssl();
-		/*	while (true)
-			{*/
 		if (ssl::sslAccept(channel_->ssl()) != 1)
 		{
-			LOG_ERROR << channel_->fd() << "openssl error ";
 			if (SSL_get_error(channel_->ssl(), 0) != SSL_ERROR_WANT_READ)
 			{
 				shutdown();
 				LOG_ERROR << channel_->fd() << " open ssl error";
-				//break;
 			}
-
+			//next readable try to handshape
+			LOG_ERROR << channel_->fd() << "openssl error is SSL_ERROR_WANT_READ ";
 		}
 		else
 		{
 			channel_->setSslAccpeted(true);
-			LOG_INFO << channel_->fd() << " open ssl channel";
-			//break;
+			LOG_INFO << channel_->fd() << " open ssl channeled";
 		}
-		//}
 	}
 }
 

@@ -1,7 +1,7 @@
 #pragma once
-#include <muduo/base/Timestamp.h>
 #include <muduo/net/Buffer.h>
 #include <muduo/net/websocket/WebSocketConnection.h>
+#include <muduo/net/websocket/WebSocketTypes.h>
 #include <any>
 namespace muduo
 {
@@ -31,7 +31,7 @@ class WebSocketContext
 	bool manageHandshake(Buffer *buf, Timestamp reciveTime);
 	string webSocketHandshakeAccept() const;
 	WebSocketParseState getState() const { return state_; }
-	const WebSocketPtr &getWebSocketConnection() const { return webSocketConn_; }
+	WebSocketPtr &getWebSocketConnection() { return webSocketConn_; }
 
   private:
 	bool processRequestLine(const char *begin, const char *end);

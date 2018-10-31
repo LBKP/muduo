@@ -12,6 +12,7 @@ set(HEADERS
   WebSocketContext.h
   WebSocketServer.h
   WebSocketConnection.h
+  WebSocketTypes.h
   )
 install(FILES ${HEADERS} DESTINATION include/muduo/net/websocket)
 
