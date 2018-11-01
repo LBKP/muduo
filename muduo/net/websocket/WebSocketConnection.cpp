@@ -86,10 +86,13 @@ bool WebSocketConnection::preaseMessage(Buffer *buf, Timestamp receiveTime)
 			return false;
 		receiveHeader_.preaseDown = false;
 	}
+	LOG_INFO << "fin " << receiveHeader_.fin << " opcode " << receiveHeader_.opcode
+		<< " maske " << receiveHeader_.mask << " payload "
+		<< receiveHeader_.payload << "Key" << receiveHeader_.maskKey;
 	fetchPayload(buf);
 	LOG_INFO << "fin " << receiveHeader_.fin << " opcode " << receiveHeader_.opcode
 		<< " maske " << receiveHeader_.mask << " payload "
-		<< receiveHeader_.payload;
+		<< receiveHeader_.payload << "Key" << receiveHeader_.maskKey;
 
 	if (receiveHeader_.preaseDown && receiveHeader_.fin)
 		onMessageCallback_(shared_from_this(), &recivedBuf_, receiveTime);
@@ -200,11 +203,6 @@ void WebSocketConnection::fetchPayload(Buffer *buf)
 			recivedBuf_.append(buf->retrieveAsString(receiveHeader_.payload));
 			down = true;
 		}
-		else
-		{
-			receiveHeader_.payload -= readable;
-			recivedBuf_.append(buf->retrieveAsString(readable));
-		}
 	}
 	else
 	{
@@ -220,19 +218,13 @@ void WebSocketConnection::fetchPayload(Buffer *buf)
 		{
 			message = buf->retrieveAsString(receiveHeader_.payload);
 			down = true;
+			for (size_t i = 0; i < message.size(); i++)
+			{
+				int j = i % 4;
+				char val = message[i] ^ receiveHeader_.maskKey[j];
+				recivedBuf_.append(&val, 1);
+			}
 		}
-		else
-		{
-			receiveHeader_.payload -= readable;
-			message = buf->retrieveAsString(readable);
-		}
-		for (size_t i = 0; i < message.size(); i++)
-		{
-			int j = i % 4;
-			char val = message[i] ^ receiveHeader_.maskKey[j];
-			recivedBuf_.append(&val, 1);
-		}
-
 		receiveHeader_.preaseDown = down;
 	}
 }

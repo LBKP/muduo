@@ -53,7 +53,9 @@ class WebSocketConnection
 		char maskKey[4];
 		WebSocketHeader()
 			: fin(false), opcode(CONTINUATION_FRAME), mask(false), payload(0),
-			  preaseDown(true) {}
+			preaseDown(true) {
+			memset(maskKey, 0, 4);
+		}
 		~WebSocketHeader() {}
 	};
 

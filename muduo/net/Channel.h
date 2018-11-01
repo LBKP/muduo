@@ -140,8 +140,8 @@ class Channel : noncopyable
 	EventCallback errorCallback_;
 
 	SSL_CTX *ctx_;
-	SSL *ssl_;
 	bool sslAccepted;
+	SSL *ssl_;
 };
 
 } // namespace net

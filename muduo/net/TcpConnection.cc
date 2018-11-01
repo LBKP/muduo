@@ -208,6 +208,7 @@ void TcpConnection::shutdown()
 	// FIXME: use compare and swap
 	if (state_ == kConnected)
 	{
+		channel_->setSslAccpeted(false);
 		setState(kDisconnecting);
 		// FIXME: shared_from_this()?
 		loop_->runInLoop(std::bind(&TcpConnection::shutdownInLoop, this));
@@ -451,6 +452,7 @@ void TcpConnection::handleClose()
 	// we don't close fd, leave it to dtor, so we can find leaks easily.
 	setState(kDisconnected);
 	channel_->disableAll();
+	channel_->setSslAccpeted(false);
 
 	TcpConnectionPtr guardThis(shared_from_this());
 	connectionCallback_(guardThis);

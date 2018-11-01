@@ -32,7 +32,8 @@ Channel::Channel(EventLoop* loop, int fd__, SSL_CTX *ctx)
     eventHandling_(false),
     addedToLoop_(false),
     ctx_(ctx),
-	sslAccepted(false)
+	sslAccepted(false),
+	ssl_(nullptr)
 {
   if (ctx_)
   {
