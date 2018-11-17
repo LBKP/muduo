@@ -2,12 +2,17 @@
 #define MUDUO_BASE_TYPES_H
 
 #include <stdint.h>
+//#ifndef MUDUO_STD_STRING
+//#define MUDUO_STD_STRING
+//#endif // !MUDUO_STD_STRING
+
 #ifdef MUDUO_STD_STRING
 #include <string>
 #else  // !MUDUO_STD_STRING
 #include <ext/vstring.h>
 #include <ext/vstring_fwd.h>
 #endif
+
 
 #ifndef NDEBUG
 #include <assert.h>
