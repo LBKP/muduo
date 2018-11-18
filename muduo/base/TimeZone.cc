@@ -81,7 +81,8 @@ const int kSecondsPerDay = 24*60*60;
 }
 
 using namespace muduo;
-using namespace std;
+using std::vector;
+using std::logic_error;
 
 struct TimeZone::Data
 {

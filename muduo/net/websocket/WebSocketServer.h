@@ -1,19 +1,19 @@
 #pragma once
 #include <muduo/base/Logging.h>
 #include <muduo/base/Timestamp.h>
+#include <muduo/base/Types.h>
 #include <muduo/net/Openssl.h>
 #include <muduo/net/TcpServer.h>
 #include <muduo/net/websocket/WebSocketContext.h>
 #include <muduo/net/websocket/WebSocketTypes.h>
-#include <string>
 
+using std::shared_ptr;
 namespace muduo
 {
 namespace net
 {
 namespace wss
 {
-using namespace std;
 class WebSocketServer
 {
 public:
