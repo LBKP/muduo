@@ -156,7 +156,6 @@ StringPiece ProcessInfo::procname(const string& stat)
     name = std::string_view(stat.data()+lp+1, rp-lp-1);
   }
   return name;
-  name.c
 }
 
 string ProcessInfo::procStatus()

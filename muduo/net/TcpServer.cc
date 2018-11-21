@@ -22,8 +22,7 @@ using namespace muduo::net;
 TcpServer::TcpServer(EventLoop* loop,
 	const InetAddress& listenAddr,
 	const string& nameArg,
-	Option option,
-	ssl::sslAttrivutesPtr sslAttributes)
+	Option option)
 	: loop_(CHECK_NOTNULL(loop)),
 	ipPort_(listenAddr.toIpPort()),
 	name_(nameArg),
@@ -115,7 +114,7 @@ TcpConnectionPtr TcpServer::createConnectiong(const string &nameArg,
 											  const InetAddress &peerAddr)
 {
 	LOG_INFO << "TcpServer::newConnection [" << name_
-			 << "] - new connection [" << connName
+			 << "] - new connection [" << nameArg
 			 << "] from " << peerAddr.toIpPort();
-	return new TcpConnection(ioLoop, connName, sockfd, localAddr, peerAddr);
+	return std::move(TcpConnectionPtr(new TcpConnection(loop_, nameArg, sockfd, localAddr, peerAddr)));
 }

@@ -11,73 +11,36 @@ namespace wss
 WebSocketServer::WebSocketServer(EventLoop *loop, const InetAddress &addr,
 								 const string &name, TcpServer::Option option,
 								 ssl::sslAttrivutesPtr sslAttr)
-	: TcpServer(loop, addr, name, option, sslAttr)
+	: TcpServer(loop, addr, name, option),
+	sslAttributes_(sslAttr),
+	frame_(Opcode::TEXT_FRAME)
 {
-	
-	tcpServer_.setConnectionCallback(
-		bind(&WebSocketServer::onConnection, this, std::placeholders::_1));
-	tcpServer_.setMessageCallback(
-		bind(&WebSocketServer::onMessage, this, std::placeholders::_1,
-			 std::placeholders::_2, std::placeholders::_3));
+	setMessageCallback(WebSocketServer::defaultOnMessageCallback/*bind(&WebSocketServer::defaultOnMessageCallback,
+							this, std::placeholders::_1, std::placeholders::_2,
+							std::placeholders::_3)*/);
 }
 
-void WebSocketServer::start()
+WebSocketServer::~WebSocketServer()
 {
-	LOG_INFO << tcpServer_.name() << "websocketserver started";
-	tcpServer_.start();
 }
 
-void WebSocketServer::onConnection(const TcpConnectionPtr &connection)
+TcpConnectionPtr WebSocketServer::createConnectiong(const string & nameArg, int sockfd, const InetAddress & localAddr, const InetAddress & peerAddr)
 {
-	if (connection->connected())
-	{
-		auto webConn =
-			shared_ptr<WebSocketConnection>(new WebSocketConnection(connection));
-		webConn->setMessageCallBack(onMessageCallback_);
-		connection->setContext(WebSocketContext(webConn));
-		LOG_INFO << "Tcp connection connected" << connection->getTcpInfoString();
-	}
+	LOG_INFO << "WebSocketServer::newConnection [" << name_
+		<< "] - new connection [" << nameArg
+		<< "] from " << peerAddr.toIpPort();
+	TcpConnectionPtr conn(new WebSocketConnection(loop_, nameArg, sockfd, localAddr, peerAddr, sslAttributes_));
+	WebSocketPtr webConn = std::dynamic_pointer_cast<WebSocketConnection>(conn);
+	conn->setContext(WebSocketContext(webConn));
+	webConn->setOpcode(frame_);
+	return conn;
 }
 
-void WebSocketServer::onMessage(const TcpConnectionPtr &connection, Buffer *buf,
-								Timestamp reciveTime)
-{
-	WebSocketContext *context =
-		std::any_cast<WebSocketContext>(connection->getMutableContext());
-	if (context->getState() <
-		WebSocketContext::WebSocketParseState::kConnectionEstablished)
-	{
-		if (context->manageHandshake(buf, reciveTime))
-		{
-			onHandshake(connection, context);
-			buf->retrieveAll();
-		}
-	}
-	else
-	{
-		context->getWebSocketConnection()->preaseMessage(buf, reciveTime);
-	}
-}
-
-void WebSocketServer::onHandshake(const TcpConnectionPtr &connection,
-								  const WebSocketContext *context)
-{
-	Buffer buf;
-	string key = context->webSocketHandshakeAccept();
-	buf.append("HTTP/1.1 101 Switching Protocols\r\n"
-			   "Upgrade: WebSocket\r\n"
-			   "Sec-WebSocket-Version: 13\r\n"
-			   "Connection: Upgrade\r\n"
-			   "Sec-WebSocket-Accept: " +
-			   key + "\r\n");
-	connection->send(&buf);
-}
-
-void WebSocketServer::defaultOnMessageCallback(WebSocketPtr websocket,
+void WebSocketServer::defaultOnMessageCallback(TcpConnectionPtr websocket,
 											   Buffer *buf,
 											   Timestamp receiveTime)
 {
-	buf->append('\0');
+	buf->appendInt8(0);
 	LOG_INFO << "recived message " << buf->peek();
 	websocket->send(buf, Opcode::TEXT_FRAME);
 }
