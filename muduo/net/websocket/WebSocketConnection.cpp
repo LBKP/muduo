@@ -5,9 +5,21 @@ namespace muduo::net
 {
 namespace wss
 {
-WebSocketConnection::WebSocketConnection(const TcpConnectionPtr &conn)
-	: connection_(conn) {}
-WebSocketConnection::~WebSocketConnection() {}
+WebSocketConnection::WebSocketConnection(EventLoop *loop,
+										 const string &name,
+										 int sockfd,
+										 const InetAddress &localAddr,
+										 const InetAddress &peerAddr,
+										 ssl::sslAttrivutesPtr sslAttr = ssl::sslAttrivutesPtr())
+	: TcpConnection(loop, name, sockfd, localAddr, peerAddr),
+	  sslAttr_(sslAttr)
+{
+}
+WebSocketConnection::~WebSocketConnection()
+{
+	LOG_DEBUG << "WebSocketConnection::dtor[" << name_ << "] at " << this
+			  << " fd=" << channel_->fd();
+}
 
 bool WebSocketConnection::connected() const
 {
@@ -49,7 +61,7 @@ void WebSocketConnection::send(const void *message, int64_t len, Opcode frame)
 	buf.appendInt8(payload);
 	if (payloadExternBytes == 2)
 	{
-		buf.appendInt16(/*sockets::hostToNetwork16(*/static_cast<uint16_t>(len)/*)*/);
+		buf.appendInt16(/*sockets::hostToNetwork16(*/ static_cast<uint16_t>(len) /*)*/);
 	}
 	else if (payloadExternBytes == 8)
 	{
@@ -57,9 +69,7 @@ void WebSocketConnection::send(const void *message, int64_t len, Opcode frame)
 	}
 	buf.append(message, len);
 	LOG_DEBUG << buf.peek();
-	auto conn = connection_.lock();
-	if (conn)
-		return conn->send(&buf);
+	TcpConnection::send(buf);
 }
 
 void WebSocketConnection::send(const StringPiece &message, Opcode frame)
@@ -70,6 +80,54 @@ void WebSocketConnection::send(const StringPiece &message, Opcode frame)
 void WebSocketConnection::send(Buffer *message, Opcode frame)
 {
 	send(message->peek(), message->readableBytes(), frame);
+}
+
+size_t sendToChannel(const void *message, size_t len)
+{
+	return ssl::sslSend(channel_->ssl(), message, static_cast<int>(len));
+}
+
+void TcpConnection::handleRead(Timestamp receiveTime)
+{
+	loop_->assertInLoopThread();
+	int savedErrno = 0;
+	LOG_INFO << sslAttr_.get();
+	if (channel_->getSslAccpeted())
+	{
+		ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno, channel_->ssl());
+		if (n > 0)
+		{
+			messageCallback_(shared_from_this(), &inputBuffer_, receiveTime);
+		}
+		else if (n == 0)
+		{
+			handleClose();
+		}
+		else
+		{
+			errno = savedErrno;
+			LOG_SYSERR << "TcpConnection::handleRead";
+			handleError();
+		}
+	}
+	else
+	{
+		if (ssl::sslAccept(channel_->ssl()) != 1)
+		{
+			if (SSL_get_error(channel_->ssl(), 0) != SSL_ERROR_WANT_READ)
+			{
+				shutdown();
+				LOG_ERROR << channel_->fd() << " open ssl error";
+			}
+			// next readable try to handshape
+			LOG_ERROR << channel_->fd() << "openssl error is SSL_ERROR_WANT_READ ";
+		}
+		else
+		{
+			channel_->setSslAccpeted(true);
+			LOG_INFO << channel_->fd() << " open ssl channeled";
+		}
+	}
 }
 
 bool WebSocketConnection::preaseMessage(Buffer *buf, Timestamp receiveTime)
@@ -87,12 +145,12 @@ bool WebSocketConnection::preaseMessage(Buffer *buf, Timestamp receiveTime)
 		receiveHeader_.preaseDown = false;
 	}
 	LOG_INFO << "fin " << receiveHeader_.fin << " opcode " << receiveHeader_.opcode
-		<< " maske " << receiveHeader_.mask << " payload "
-		<< receiveHeader_.payload << "Key" << receiveHeader_.maskKey;
+			 << " maske " << receiveHeader_.mask << " payload "
+			 << receiveHeader_.payload << "Key" << receiveHeader_.maskKey;
 	fetchPayload(buf);
 	LOG_INFO << "fin " << receiveHeader_.fin << " opcode " << receiveHeader_.opcode
-		<< " maske " << receiveHeader_.mask << " payload "
-		<< receiveHeader_.payload << "Key" << receiveHeader_.maskKey;
+			 << " maske " << receiveHeader_.mask << " payload "
+			 << receiveHeader_.payload << "Key" << receiveHeader_.maskKey;
 
 	if (receiveHeader_.preaseDown && receiveHeader_.fin)
 		onMessageCallback_(shared_from_this(), &recivedBuf_, receiveTime);
@@ -134,7 +192,7 @@ bool WebSocketConnection::fecthOpcode(Buffer *buf)
 		receiveHeader_.opcode != Opcode::BINARY_FRAME)
 	{
 		LOG_ERROR << "The opcode is" << receiveHeader_.opcode
-			<< " will be retrieve all";
+				  << " will be retrieve all";
 		buf->retrieveAll();
 		return false;
 	}
@@ -146,7 +204,6 @@ void WebSocketConnection::fetchMask(Buffer *buf)
 	const char *data = buf->peek();
 	receiveHeader_.mask = data[1] & 0x80;
 }
-
 
 bool WebSocketConnection::fetchPayloadLength(Buffer *buf)
 {
@@ -177,7 +234,6 @@ bool WebSocketConnection::fetchPayloadLength(Buffer *buf)
 	}
 
 	return false;
-
 }
 
 void WebSocketConnection::fetchMaskingKey(Buffer *buf)

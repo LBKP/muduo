@@ -26,34 +26,32 @@ using namespace muduo::net;
 void muduo::net::defaultConnectionCallback(const TcpConnectionPtr &conn)
 {
 	LOG_TRACE << conn->localAddress().toIpPort() << " -> "
-		<< conn->peerAddress().toIpPort() << " is "
-		<< (conn->connected() ? "UP" : "DOWN");
+			  << conn->peerAddress().toIpPort() << " is "
+			  << (conn->connected() ? "UP" : "DOWN");
 	// do not call conn->forceClose(), because some users want to register message callback only.
 }
 
 void muduo::net::defaultMessageCallback(const TcpConnectionPtr &,
-	Buffer *buf,
-	Timestamp)
+										Buffer *buf,
+										Timestamp)
 {
 	buf->retrieveAll();
 }
 
 TcpConnection::TcpConnection(EventLoop *loop,
-	const string &nameArg,
-	int sockfd,
-	const InetAddress &localAddr,
-	const InetAddress &peerAddr,
-	ssl::sslAttrivutesPtr sslAttr)
+							 const string &nameArg,
+							 int sockfd,
+							 const InetAddress &localAddr,
+							 const InetAddress &peerAddr)
 	: loop_(CHECK_NOTNULL(loop)),
-	name_(nameArg),
-	state_(kConnecting),
-	reading_(true),
-	socket_(new Socket(sockfd)),
-	channel_(new Channel(loop, sockfd, sslAttr ? sslAttr->ctx : nullptr)),
-	localAddr_(localAddr),
-	peerAddr_(peerAddr),
-	highWaterMark_(64 * 1024 * 1024),
-	sslAttr_(sslAttr)
+	  name_(nameArg),
+	  state_(kConnecting),
+	  reading_(true),
+	  socket_(new Socket(sockfd)),
+	  channel_(new Channel(loop, sockfd, sslAttr ? sslAttr->ctx : nullptr)),
+	  localAddr_(localAddr),
+	  peerAddr_(peerAddr),
+	  highWaterMark_(64 * 1024 * 1024),
 {
 	channel_->setReadCallback(
 		std::bind(&TcpConnection::handleRead, this, _1));
@@ -64,15 +62,15 @@ TcpConnection::TcpConnection(EventLoop *loop,
 	channel_->setErrorCallback(
 		std::bind(&TcpConnection::handleError, this));
 	LOG_DEBUG << "TcpConnection::ctor[" << name_ << "] at " << this
-		<< " fd=" << sockfd;
+			  << " fd=" << sockfd;
 	socket_->setKeepAlive(true);
 }
 
 TcpConnection::~TcpConnection()
 {
 	LOG_DEBUG << "TcpConnection::dtor[" << name_ << "] at " << this
-		<< " fd=" << channel_->fd()
-		<< " state=" << stateToString();
+			  << " fd=" << channel_->fd()
+			  << " state=" << stateToString();
 	assert(state_ == kDisconnected);
 }
 
@@ -107,15 +105,15 @@ void TcpConnection::send(const StringPiece &message)
 			void (TcpConnection::*fp)(const StringPiece &message) = &TcpConnection::sendInLoop;
 			loop_->runInLoop(
 				std::bind(fp,
-					this,     // FIXME
-					string(message)));
+						  this, // FIXME
+						  string(message)));
 			//std::forward<string>(message)));
 		}
 	}
 }
 
 // FIXME efficiency!!!
-void TcpConnection::send(Buffer* buf)
+void TcpConnection::send(Buffer *buf)
 {
 	if (state_ == kConnected)
 	{
@@ -126,22 +124,22 @@ void TcpConnection::send(Buffer* buf)
 		}
 		else
 		{
-			void (TcpConnection::*fp)(const StringPiece& message) = &TcpConnection::sendInLoop;
+			void (TcpConnection::*fp)(const StringPiece &message) = &TcpConnection::sendInLoop;
 			loop_->runInLoop(
 				std::bind(fp,
-					this,     // FIXME
-					buf->retrieveAllAsString()));
+						  this, // FIXME
+						  buf->retrieveAllAsString()));
 			//std::forward<string>(message)));
 		}
 	}
 }
 
-void TcpConnection::sendInLoop(const StringPiece& message)
+void TcpConnection::sendInLoop(const StringPiece &message)
 {
 	sendInLoop(message.data(), message.size());
 }
 
-void TcpConnection::sendInLoop(const void* data, size_t len)
+void TcpConnection::sendInLoop(const void *data, size_t len)
 {
 	loop_->assertInLoopThread();
 	ssize_t nwrote = 0;
@@ -155,20 +153,14 @@ void TcpConnection::sendInLoop(const void* data, size_t len)
 	// if no thing in output queue, try writing directly
 	if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
 	{
-		if (sslAttr_)
-		{
-			nwrote = ssl::sslSend(channel_->ssl(), data, static_cast<int>(len));
-		}
-		else
-		{
-			nwrote = sockets::write(channel_->fd(), data, len);
-		}
+		this->sendToChannel(data, len);
 		if (nwrote >= 0)
 		{
 			remaining = len - nwrote;
 			if (remaining == 0 && writeCompleteCallback_)
 			{
-				loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
+				loop_->queueInLoop(
+					std::bind(writeCompleteCallback_, shared_from_this()));
 			}
 		}
 		else // nwrote < 0
@@ -189,18 +181,21 @@ void TcpConnection::sendInLoop(const void* data, size_t len)
 	if (!faultError && remaining > 0)
 	{
 		size_t oldLen = outputBuffer_.readableBytes();
-		if (oldLen + remaining >= highWaterMark_
-			&& oldLen < highWaterMark_
-			&& highWaterMarkCallback_)
+		if (oldLen + remaining >= highWaterMark_ && oldLen < highWaterMark_ && highWaterMarkCallback_)
 		{
 			loop_->queueInLoop(std::bind(highWaterMarkCallback_, shared_from_this(), oldLen + remaining));
 		}
-		outputBuffer_.append(static_cast<const char*>(data) + nwrote, remaining);
+		outputBuffer_.append(static_cast<const char *>(data) + nwrote, remaining);
 		if (!channel_->isWriting())
 		{
 			channel_->enableWriting();
 		}
 	}
+}
+
+size_t sendToChannel(const void *message, size_t len)
+{
+	return sockets::write(channel_->fd(), message, len);
 }
 
 void TcpConnection::shutdown()
@@ -267,7 +262,7 @@ void TcpConnection::forceCloseWithDelay(double seconds)
 		loop_->runAfter(
 			seconds,
 			makeWeakCallback(shared_from_this(),
-				&TcpConnection::forceClose));  // not forceCloseInLoop to avoid race condition
+							 &TcpConnection::forceClose)); // not forceCloseInLoop to avoid race condition
 	}
 }
 
@@ -281,7 +276,7 @@ void TcpConnection::forceCloseInLoop()
 	}
 }
 
-const char* TcpConnection::stateToString() const
+const char *TcpConnection::stateToString() const
 {
 	switch (state_)
 	{
@@ -361,42 +356,20 @@ void TcpConnection::handleRead(Timestamp receiveTime)
 {
 	loop_->assertInLoopThread();
 	int savedErrno = 0;
-	LOG_INFO << sslAttr_.get();
-	if (channel_->getSslAccpeted() || !sslAttr_)
+	ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno, channel_->ssl());
+	if (n > 0)
 	{
-		ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno, channel_->ssl());
-		if (n > 0)
-		{
-			messageCallback_(shared_from_this(), &inputBuffer_, receiveTime);
-		}
-		else if (n == 0)
-		{
-			handleClose();
-		}
-		else
-		{
-			errno = savedErrno;
-			LOG_SYSERR << "TcpConnection::handleRead";
-			handleError();
-		}
+		messageCallback_(shared_from_this(), &inputBuffer_, receiveTime);
+	}
+	else if (n == 0)
+	{
+		handleClose();
 	}
 	else
 	{
-		if (ssl::sslAccept(channel_->ssl()) != 1)
-		{
-			if (SSL_get_error(channel_->ssl(), 0) != SSL_ERROR_WANT_READ)
-			{
-				shutdown();
-				LOG_ERROR << channel_->fd() << " open ssl error";
-			}
-			//next readable try to handshape
-			LOG_ERROR << channel_->fd() << "openssl error is SSL_ERROR_WANT_READ ";
-		}
-		else
-		{
-			channel_->setSslAccpeted(true);
-			LOG_INFO << channel_->fd() << " open ssl channeled";
-		}
+		errno = savedErrno;
+		LOG_SYSERR << "TcpConnection::handleRead";
+		handleError();
 	}
 }
 
@@ -406,12 +379,9 @@ void TcpConnection::handleWrite()
 	if (channel_->isWriting())
 	{
 		ssize_t n;
-		if (sslAttr_->ctx)
-			n = SSL_write(channel_->ssl(), outputBuffer_.peek(), static_cast<int>(outputBuffer_.readableBytes()));
-		else
-			n = sockets::write(channel_->fd(),
-				outputBuffer_.peek(),
-				outputBuffer_.readableBytes());
+		n = this->sendToChannel(outputBuffer_.peek(),
+								outputBuffer_.readableBytes());
+
 		if (n > 0)
 		{
 			outputBuffer_.retrieve(n);
@@ -440,7 +410,7 @@ void TcpConnection::handleWrite()
 	else
 	{
 		LOG_TRACE << "Connection fd = " << channel_->fd()
-			<< " is down, no more writing";
+				  << " is down, no more writing";
 	}
 }
 
@@ -464,5 +434,5 @@ void TcpConnection::handleError()
 {
 	int err = sockets::getSocketError(channel_->fd());
 	LOG_ERROR << "TcpConnection::handleError [" << name_
-		<< "] - SO_ERROR = " << err << " " << strerror_tl(err);
+			  << "] - SO_ERROR = " << err << " " << strerror_tl(err);
 }

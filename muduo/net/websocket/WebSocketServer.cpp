@@ -1,5 +1,5 @@
-#include <muduo/net/websocket/WebSocketServer.h>
 #include <muduo/net/websocket/WebSocketContext.h>
+#include <muduo/net/websocket/WebSocketServer.h>
 
 namespace muduo
 {
@@ -11,9 +11,9 @@ namespace wss
 WebSocketServer::WebSocketServer(EventLoop *loop, const InetAddress &addr,
 								 const string &name, TcpServer::Option option,
 								 ssl::sslAttrivutesPtr sslAttr)
-	: tcpServer_(loop, addr, name, option, sslAttr),
-	  onMessageCallback_(defaultOnMessageCallback)
+	: TcpServer(loop, addr, name, option, sslAttr)
 {
+	
 	tcpServer_.setConnectionCallback(
 		bind(&WebSocketServer::onConnection, this, std::placeholders::_1));
 	tcpServer_.setMessageCallback(
@@ -21,9 +21,6 @@ WebSocketServer::WebSocketServer(EventLoop *loop, const InetAddress &addr,
 			 std::placeholders::_2, std::placeholders::_3));
 }
 
-WebSocketServer::~WebSocketServer()
-{
-}
 void WebSocketServer::start()
 {
 	LOG_INFO << tcpServer_.name() << "websocketserver started";
@@ -34,18 +31,21 @@ void WebSocketServer::onConnection(const TcpConnectionPtr &connection)
 {
 	if (connection->connected())
 	{
-		auto webConn = shared_ptr<WebSocketConnection>(new WebSocketConnection(connection));
+		auto webConn =
+			shared_ptr<WebSocketConnection>(new WebSocketConnection(connection));
 		webConn->setMessageCallBack(onMessageCallback_);
 		connection->setContext(WebSocketContext(webConn));
-		LOG_INFO << "Tcp connection connected"
-				 << connection->getTcpInfoString();
+		LOG_INFO << "Tcp connection connected" << connection->getTcpInfoString();
 	}
 }
 
-void WebSocketServer::onMessage(const TcpConnectionPtr &connection, Buffer *buf, Timestamp reciveTime)
+void WebSocketServer::onMessage(const TcpConnectionPtr &connection, Buffer *buf,
+								Timestamp reciveTime)
 {
-	WebSocketContext *context = std::any_cast<WebSocketContext>(connection->getMutableContext());
-	if (context->getState() < WebSocketContext::WebSocketParseState::kConnectionEstablished)
+	WebSocketContext *context =
+		std::any_cast<WebSocketContext>(connection->getMutableContext());
+	if (context->getState() <
+		WebSocketContext::WebSocketParseState::kConnectionEstablished)
 	{
 		if (context->manageHandshake(buf, reciveTime))
 		{
@@ -59,7 +59,8 @@ void WebSocketServer::onMessage(const TcpConnectionPtr &connection, Buffer *buf,
 	}
 }
 
-void WebSocketServer::onHandshake(const TcpConnectionPtr &connection, const WebSocketContext *context)
+void WebSocketServer::onHandshake(const TcpConnectionPtr &connection,
+								  const WebSocketContext *context)
 {
 	Buffer buf;
 	string key = context->webSocketHandshakeAccept();
@@ -76,6 +77,7 @@ void WebSocketServer::defaultOnMessageCallback(WebSocketPtr websocket,
 											   Buffer *buf,
 											   Timestamp receiveTime)
 {
+	buf->append('\0');
 	LOG_INFO << "recived message " << buf->peek();
 	websocket->send(buf, Opcode::TEXT_FRAME);
 }

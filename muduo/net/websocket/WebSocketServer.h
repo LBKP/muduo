@@ -14,34 +14,34 @@ namespace net
 {
 namespace wss
 {
-class WebSocketServer
+class WebSocketServer : public TcpServer
 {
 public:
-	WebSocketServer(EventLoop *loop, const InetAddress &addr, const string &name,
-									TcpServer::Option option = TcpServer::kNoReusePort,
-									ssl::sslAttrivutesPtr sslAttr = ssl::sslAttrivutesPtr());
-	~WebSocketServer();
-	void start();
-	void setOnMessageCallBack(WebSocketMessageCallback callback)
-	{
-		onMessageCallback_ = callback;
-	}
+	WebSocketServer(EventLoop *loop, 
+					const InetAddress &addr, 
+					const string &name,
+					TcpServer::Option option = TcpServer::kNoReusePort,
+					ssl::sslAttrivutesPtr sslAttr = ssl::sslAttrivutesPtr());
+	virtual ~WebSocketServer();
 
 private:
-	// noncopyable
-	WebSocketServer(const WebSocketServer &) = delete;
-	WebSocketServer &operator=(const WebSocketServer &) = delete;
+  	/// Not thread safe, but in loop
+ 	virtual void newConnection(int sockfd, const InetAddress &peerAddr);
 
+	virtual TcpConnectionPtr createConnectiong(const string &nameArg,
+											   int sockfd,
+											   const InetAddress &localAddr,
+											   const InetAddress &peerAddr);
 	// callback funcation
-	void onConnection(const TcpConnectionPtr &connection);
-	void onMessage(const TcpConnectionPtr &connection, Buffer *buf,
-								 Timestamp reciveTime);
-	void onHandshake(const TcpConnectionPtr &connection,
-									 const WebSocketContext *context);
-	static void defaultOnMessageCallback(WebSocketPtr websocket, Buffer *buf, Timestamp receiveTime);
-
-	TcpServer tcpServer_;
-	WebSocketMessageCallback onMessageCallback_;
+  	void onMessage(const TcpConnectionPtr &connection, Buffer *buf,
+				 Timestamp reciveTime);
+  	void onHandshake(const TcpConnectionPtr &connection,
+				   const WebSocketContext *context);
+  	static void defaultOnMessageCallback(WebSocketPtr websocket, Buffer *buf, Timestamp receiveTime);
+private:
+  	//openssl is open
+  	bool openSsl_;
+  	ssl::sslAttrivutesPtr sslAttributes_;
 };
 } // namespace wss
 } // namespace net

@@ -47,9 +47,8 @@ class TcpServer : noncopyable
   TcpServer(EventLoop* loop,
             const InetAddress& listenAddr,
             const string& nameArg,
-            Option option = kNoReusePort,
-            ssl::sslAttrivutesPtr sslAttributes = ssl::sslAttrivutesPtr());
-  ~TcpServer();  // force out-line dtor, for std::unique_ptr members.
+            Option option = kNoReusePort);
+  virtual ~TcpServer();  // force out-line dtor, for std::unique_ptr members.
 
   const string& ipPort() const { return ipPort_; }
   const string& name() const { return name_; }
@@ -95,11 +94,16 @@ class TcpServer : noncopyable
 
  private:
   /// Not thread safe, but in loop
-  void newConnection(int sockfd, const InetAddress& peerAddr);
+  virtual void newConnection(int sockfd, const InetAddress& peerAddr);
   /// Thread safe.
-  void removeConnection(const TcpConnectionPtr& conn);
+  virtual void removeConnection(const TcpConnectionPtr& conn);
   /// Not thread safe, but in loop
-  void removeConnectionInLoop(const TcpConnectionPtr& conn);
+  virtual void removeConnectionInLoop(const TcpConnectionPtr& conn);
+
+  virtual TcpConnectionPtr createConnectiong(const string &nameArg,
+                                             int sockfd,
+                                             const InetAddress &localAddr,
+                                             const InetAddress &peerAddr);
 
   typedef std::map<string, TcpConnectionPtr> ConnectionMap;
 
@@ -116,9 +120,7 @@ class TcpServer : noncopyable
   // always in loop thread
   int nextConnId_;
   ConnectionMap connections_;
-  //openssl is open
-  bool openSsl_;
-  ssl::sslAttrivutesPtr sslAttributes_;
+  
 };
 
 }  // namespace net

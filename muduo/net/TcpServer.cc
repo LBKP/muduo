@@ -31,15 +31,9 @@ TcpServer::TcpServer(EventLoop* loop,
 	threadPool_(new EventLoopThreadPool(loop, name_)),
 	connectionCallback_(defaultConnectionCallback),
 	messageCallback_(defaultMessageCallback),
-	nextConnId_(1),
-	sslAttributes_(sslAttributes)
+	nextConnId_(1)
 {
 	acceptor_->setNewConnectionCallback(std::bind(&TcpServer::newConnection, this, _1, _2));
-	//init the openssl
-	if (sslAttributes_)
-	{
-		ssl::initSslServer(sslAttributes_);
-	}
 }
 
 TcpServer::~TcpServer()
@@ -83,13 +77,10 @@ void TcpServer::newConnection(int sockfd, const InetAddress& peerAddr)
 	++nextConnId_;
 	string connName = name_ + buf;
 
-	LOG_INFO << "TcpServer::newConnection [" << name_
-		<< "] - new connection [" << connName
-		<< "] from " << peerAddr.toIpPort();
 	InetAddress localAddr(sockets::getLocalAddr(sockfd));
 	// FIXME poll with zero timeout to double confirm the new connection
 	// FIXME use make_shared if necessary
-	TcpConnectionPtr conn(new TcpConnection(ioLoop, connName, sockfd, localAddr, peerAddr, sslAttributes_));
+	TcpConnectionPtr conn(this->createConnectiong(connName, sockfd, localAddr, peerAddr));
 	connections_[connName] = conn;
 	conn->setConnectionCallback(connectionCallback_);
 	conn->setMessageCallback(messageCallback_);
@@ -118,3 +109,13 @@ void TcpServer::removeConnectionInLoop(const TcpConnectionPtr& conn)
 		std::bind(&TcpConnection::connectDestroyed, conn));
 }
 
+TcpConnectionPtr TcpServer::createConnectiong(const string &nameArg,
+											  int sockfd,
+											  const InetAddress &localAddr,
+											  const InetAddress &peerAddr)
+{
+	LOG_INFO << "TcpServer::newConnection [" << name_
+			 << "] - new connection [" << connName
+			 << "] from " << peerAddr.toIpPort();
+	return new TcpConnection(ioLoop, connName, sockfd, localAddr, peerAddr);
+}
