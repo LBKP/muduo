@@ -47,7 +47,8 @@ public:
 				  const string& name,
 				  int sockfd,
 				  const InetAddress& localAddr,
-				  const InetAddress& peerAddr);
+				  const InetAddress& peerAddr,
+				  SSL_CTX *ctx = nullptr);
 	virtual ~TcpConnection();
 
 	EventLoop* getLoop() const {

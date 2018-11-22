@@ -14,7 +14,7 @@ WebSocketConnection::WebSocketConnection(EventLoop *loop,
 										 const InetAddress &localAddr,
 										 const InetAddress &peerAddr,
 										 ssl::sslAttrivutesPtr sslAttr)
-	:TcpConnection(loop, name, sockfd, localAddr, peerAddr),
+	:TcpConnection(loop, name, sockfd, localAddr, peerAddr, sslAttr->ctx),
 	sslAttr_(sslAttr)
 {}
 WebSocketConnection::~WebSocketConnection()
@@ -87,7 +87,7 @@ void WebSocketConnection::handleRead(Timestamp receiveTime)
 {
 	loop_->assertInLoopThread();
 	int savedErrno = 0;
-	LOG_INFO << sslAttr_.get();
+	LOG_DEBUG << sslAttr_.get();
 	if(channel_->getSslAccpeted())
 	{
 		ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno, channel_->ssl());

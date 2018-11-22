@@ -15,9 +15,11 @@ WebSocketServer::WebSocketServer(EventLoop *loop, const InetAddress &addr,
 	sslAttributes_(sslAttr),
 	frame_(Opcode::TEXT_FRAME)
 {
-	setMessageCallback(WebSocketServer::defaultOnMessageCallback/*bind(&WebSocketServer::defaultOnMessageCallback,
-							this, std::placeholders::_1, std::placeholders::_2,
-							std::placeholders::_3)*/);
+	setMessageCallback(WebSocketServer::defaultOnMessageCallback);
+	if(sslAttributes_)
+	{
+		ssl::initSslServer(sslAttributes_);
+	}
 }
 
 WebSocketServer::~WebSocketServer()
@@ -35,7 +37,7 @@ WebSocketServer::createConnectiong(EventLoop *ioLoop,
            << "] - new connection [" << nameArg << "] from "
            << peerAddr.toIpPort();
   TcpConnectionPtr conn(new WebSocketConnection(
-      loop_, nameArg, sockfd, localAddr, peerAddr, sslAttributes_));
+	  ioLoop, nameArg, sockfd, localAddr, peerAddr, sslAttributes_));
   WebSocketPtr webConn = std::dynamic_pointer_cast<WebSocketConnection>(conn);
   conn->setContext(WebSocketContext(webConn));
   webConn->setOpcode(frame_);

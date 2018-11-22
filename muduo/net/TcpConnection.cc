@@ -39,13 +39,14 @@ TcpConnection::TcpConnection(EventLoop* loop,
 							 const string& nameArg,
 							 int sockfd,
 							 const InetAddress& localAddr,
-							 const InetAddress& peerAddr)
+							 const InetAddress& peerAddr,
+							 SSL_CTX *ctx)
 	: loop_(CHECK_NOTNULL(loop)),
 	name_(nameArg),
 	state_(kConnecting),
 	reading_(true),
 	socket_(new Socket(sockfd)),
-	channel_(new Channel(loop, sockfd)),
+	channel_(new Channel(loop, sockfd, ctx)),
 	localAddr_(localAddr),
 	peerAddr_(peerAddr),
 	highWaterMark_(64 * 1024 * 1024)
@@ -375,9 +376,8 @@ void TcpConnection::handleWrite()
 	loop_->assertInLoopThread();
 	if(channel_->isWriting())
 	{
-		ssize_t n = sockets::write(channel_->fd(),
-								   outputBuffer_.peek(),
-								   outputBuffer_.readableBytes());
+		
+		size_t n = this->sendToChannel(outputBuffer_.peek(), outputBuffer_.readableBytes());	
 		if(n > 0)
 		{
 			outputBuffer_.retrieve(n);
