@@ -25,7 +25,8 @@ public:
 	virtual ~WebSocketServer();
 
 private:
-	virtual TcpConnectionPtr createConnectiong(const string &nameArg,
+	virtual TcpConnectionPtr createConnectiong(EventLoop* ioLoop, 
+											   const string &nameArg,
 											   int sockfd,
 											   const InetAddress &localAddr,
 											   const InetAddress &peerAddr);

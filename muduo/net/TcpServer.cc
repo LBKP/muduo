@@ -79,7 +79,7 @@ void TcpServer::newConnection(int sockfd, const InetAddress& peerAddr)
 	InetAddress localAddr(sockets::getLocalAddr(sockfd));
 	// FIXME poll with zero timeout to double confirm the new connection
 	// FIXME use make_shared if necessary
-	TcpConnectionPtr conn(this->createConnectiong(connName, sockfd, localAddr, peerAddr));
+	TcpConnectionPtr conn(this->createConnectiong(ioLoop, connName, sockfd, localAddr, peerAddr));
 	connections_[connName] = conn;
 	conn->setConnectionCallback(connectionCallback_);
 	conn->setMessageCallback(messageCallback_);
@@ -108,7 +108,7 @@ void TcpServer::removeConnectionInLoop(const TcpConnectionPtr& conn)
 		std::bind(&TcpConnection::connectDestroyed, conn));
 }
 
-TcpConnectionPtr TcpServer::createConnectiong(const string &nameArg,
+TcpConnectionPtr TcpServer::createConnectiong(EventLoop* ioLoop, const string &nameArg,
 											  int sockfd,
 											  const InetAddress &localAddr,
 											  const InetAddress &peerAddr)
@@ -116,5 +116,6 @@ TcpConnectionPtr TcpServer::createConnectiong(const string &nameArg,
 	LOG_INFO << "TcpServer::newConnection [" << name_
 			 << "] - new connection [" << nameArg
 			 << "] from " << peerAddr.toIpPort();
-	return std::move(TcpConnectionPtr(new TcpConnection(loop_, nameArg, sockfd, localAddr, peerAddr)));
+        return std::move(TcpConnectionPtr(
+            new TcpConnection(ioLoop, nameArg, sockfd, localAddr, peerAddr)));
 }

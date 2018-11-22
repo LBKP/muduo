@@ -24,16 +24,22 @@ WebSocketServer::~WebSocketServer()
 {
 }
 
-TcpConnectionPtr WebSocketServer::createConnectiong(const string & nameArg, int sockfd, const InetAddress & localAddr, const InetAddress & peerAddr)
+TcpConnectionPtr
+WebSocketServer::createConnectiong(EventLoop *ioLoop, 
+								   const string &nameArg,
+                                   int sockfd, 
+								   const InetAddress &localAddr,
+                                   const InetAddress &peerAddr) 
 {
-	LOG_INFO << "WebSocketServer::newConnection [" << name_
-		<< "] - new connection [" << nameArg
-		<< "] from " << peerAddr.toIpPort();
-	TcpConnectionPtr conn(new WebSocketConnection(loop_, nameArg, sockfd, localAddr, peerAddr, sslAttributes_));
-	WebSocketPtr webConn = std::dynamic_pointer_cast<WebSocketConnection>(conn);
-	conn->setContext(WebSocketContext(webConn));
-	webConn->setOpcode(frame_);
-	return conn;
+  LOG_INFO << "WebSocketServer::newConnection [" << name_
+           << "] - new connection [" << nameArg << "] from "
+           << peerAddr.toIpPort();
+  TcpConnectionPtr conn(new WebSocketConnection(
+      loop_, nameArg, sockfd, localAddr, peerAddr, sslAttributes_));
+  WebSocketPtr webConn = std::dynamic_pointer_cast<WebSocketConnection>(conn);
+  conn->setContext(WebSocketContext(webConn));
+  webConn->setOpcode(frame_);
+  return conn;
 }
 
 void WebSocketServer::defaultOnMessageCallback(TcpConnectionPtr websocket,

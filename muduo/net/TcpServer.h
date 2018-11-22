@@ -116,12 +116,13 @@ private:
 	/// Not thread safe, but in loop
 	virtual void removeConnectionInLoop(const TcpConnectionPtr& conn);
 
-	virtual TcpConnectionPtr createConnectiong(const string &nameArg,
-											   int sockfd,
-											   const InetAddress &localAddr,
-											   const InetAddress &peerAddr);
+    virtual TcpConnectionPtr createConnectiong(EventLoop* ioLoop,
+												const string &nameArg,
+		 										int sockfd,
+                          						const InetAddress &localAddr,
+                          						const InetAddress &peerAddr);
 
-	typedef std::map<string, TcpConnectionPtr> ConnectionMap;
+        typedef std::map<string, TcpConnectionPtr> ConnectionMap;
 protected:
 	EventLoop* loop_;  // the acceptor loop
 	const string ipPort_;
