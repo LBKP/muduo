@@ -1,4 +1,3 @@
-#include <muduo/net/websocket/WebSocketContext.h>
 #include <muduo/net/websocket/WebSocketServer.h>
 
 namespace muduo
@@ -39,7 +38,6 @@ WebSocketServer::createConnectiong(EventLoop *ioLoop,
   TcpConnectionPtr conn(new WebSocketConnection(
 	  ioLoop, nameArg, sockfd, localAddr, peerAddr, sslAttributes_));
   WebSocketPtr webConn = std::dynamic_pointer_cast<WebSocketConnection>(conn);
-  conn->setContext(WebSocketContext(webConn));
   webConn->setOpcode(frame_);
   return conn;
 }

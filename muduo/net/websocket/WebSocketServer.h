@@ -4,7 +4,6 @@
 #include <muduo/base/Types.h>
 #include <muduo/net/Openssl.h>
 #include <muduo/net/TcpServer.h>
-#include <muduo/net/websocket/WebSocketContext.h>
 #include <muduo/net/websocket/WebSocketTypes.h>
 
 using std::shared_ptr;

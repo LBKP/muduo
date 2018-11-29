@@ -10,7 +10,20 @@ namespace net
 class Buffer;
 namespace wss
 { 
+const string wssMgic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 class WebSocketConnection;
+enum class WebSocketState : char
+{
+	kOff,
+	kExpectRequestLine,
+	kExpectUpgradeLine,
+	kExpectConnectionLine,
+	kExpectOriginLine,
+	kExpectSecWebSocketVersion,
+	kExpectSecWebSocketKey,
+	kConnectionEstablished,
+	kGotAll,
+};
 //web socket packeg frame type
 enum Opcode : char
 {

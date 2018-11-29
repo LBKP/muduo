@@ -1,5 +1,4 @@
 set(wss_SRCS
-  WebSocketContext.cpp
   WebSocketServer.cpp
   WebSocketConnection.cpp
   )
@@ -9,7 +8,6 @@ target_link_libraries(muduo_wss muduo_net)
 
 install(TARGETS muduo_wss DESTINATION lib)
 set(HEADERS
-  WebSocketContext.h
   WebSocketServer.h
   WebSocketConnection.h
   WebSocketTypes.h
