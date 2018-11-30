@@ -1,4 +1,5 @@
 #include <muduo/net/websocket/WebSocketServer.h>
+#include <muduo/net/websocket/WebSocketConnection.h>
 
 namespace muduo
 {
@@ -48,7 +49,7 @@ void WebSocketServer::defaultOnMessageCallback(TcpConnectionPtr websocket,
 {
 	buf->appendInt8(0);
 	LOG_INFO << "recived message " << buf->peek();
-	websocket->send(buf, Opcode::TEXT_FRAME);
+	websocket->send(buf);
 }
 } // namespace wss
 } // namespace net

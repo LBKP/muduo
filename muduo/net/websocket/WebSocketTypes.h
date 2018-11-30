@@ -2,7 +2,6 @@
 #include <functional>
 #include <memory>
 #include <muduo/base/Timestamp.h>
-#include <muduo/net/websocket/WebSocketConnection.h>
 namespace muduo
 {
 namespace net
@@ -34,7 +33,25 @@ enum Opcode : char
 	PING_FRAME,
 	PONG_FRAME,
 };
+
+struct WebSocketHeader 
+{
+  bool fin;
+  int opcode;
+  bool mask;
+  uint64_t payload;
+  // the lase packge is preasedown, begin prease new header
+  bool preaseDown;
+  char maskKey[4];
+  WebSocketHeader()
+      : fin(false), opcode(Opcode::CONTINUATION_FRAME), mask(false), payload(0),
+        preaseDown(true) {
+    memset(maskKey, 0, 4);
+  }
+  ~WebSocketHeader() {}
+};
 typedef std::shared_ptr<WebSocketConnection> WebSocketPtr;
+typedef std::shared_ptr<WebSocketHeader> WebSocketHeaderPtr;
 typedef std::function<void(WebSocketPtr, Buffer *buf, Timestamp receiveTime)> WebSocketMessageCallback;
 }
 }

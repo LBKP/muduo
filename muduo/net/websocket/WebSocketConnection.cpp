@@ -7,25 +7,6 @@ namespace muduo::net
 {
 namespace wss
 {
-struct WebSocketHeader {
-	bool fin;
-	int opcode;
-	bool mask;
-	uint64_t payload;
-	// the lase packge is preasedown, begin prease new header
-	bool preaseDown;
-	char maskKey[4];
-	WebSocketHeader()
-		: fin(false),
-		opcode(CONTINUATION_FRAME),
-		mask(false),
-		payload(0),
-		preaseDown(true)
-	{
-		memset(maskKey, 0, 4);
-	}
-	~WebSocketHeader() {}
-};
 
 WebSocketConnection::WebSocketConnection(EventLoop *loop,
 	const string &name,
@@ -35,6 +16,7 @@ WebSocketConnection::WebSocketConnection(EventLoop *loop,
 	ssl::sslAttrivutesPtr sslAttr)
 	:TcpConnection(loop, name, sockfd, localAddr, peerAddr, sslAttr->ctx),
 	receiveHeader_(std::make_shared<WebSocketHeader>()),
+	state_(WebSocketState::kExpectRequestLine),
 	sslAttr_(sslAttr)
 {}
 WebSocketConnection::~WebSocketConnection()
@@ -191,11 +173,11 @@ bool WebSocketConnection::preaseMessage(Buffer *buf, Timestamp receiveTime)
 			return false;
 		receiveHeader_->preaseDown = false;
 	}
-	LOG_INFO << "fin " << receiveHeader_->fin << " opcode " << receiveHeader_->opcode
-		<< " maske " << receiveHeader_->mask << " payload "
-		<< receiveHeader_->payload << "Key" << receiveHeader_->maskKey;
+	LOG_DEBUG << "fin " << receiveHeader_->fin << " opcode " << receiveHeader_->opcode
+			  << " maske " << receiveHeader_->mask << " payload "
+			  << receiveHeader_->payload << "Key" << receiveHeader_->maskKey;
 	fetchPayload(buf);
-	LOG_INFO << "fin " << receiveHeader_->fin << " opcode " << receiveHeader_->opcode
+	LOG_DEBUG << "fin " << receiveHeader_->fin << " opcode " << receiveHeader_->opcode
 		<< " maske " << receiveHeader_->mask << " payload "
 		<< receiveHeader_->payload << "Key" << receiveHeader_->maskKey;
 

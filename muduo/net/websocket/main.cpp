@@ -12,13 +12,13 @@ int main(int argc, char* argv[])
 		//benchmark = true;
 	}
 	ssl::sslAttrivutesPtr ssl(new ssl::SslServerAttributes);
-	ssl->certificatePath = "/home/ubuntu/cacert.pem";
-	ssl->keyPath = "/home/ubuntu/privkey.pem";
-	ssl->certificateType = SSL_FILETYPE_PEM;
-	ssl->keyType = SSL_FILETYPE_PEM;
+	ssl->certificatePath = "/home/ubuntu/SSLKey/Apache/2_www.laobiaokuaipao.xyz.crt";
+	ssl->keyPath = "/home/ubuntu/SSLKey/Apache/3_www.laobiaokuaipao.xyz.key";
+	ssl->certificateType = 1;
+	ssl->keyType = 1;
 	EventLoop loop;
 	std::string name("wss");
-	wss::WebSocketServer server(&loop, InetAddress(8000), name, TcpServer::kNoReusePort/*, ssl*/);
+	wss::WebSocketServer server(&loop, InetAddress(8000), name, TcpServer::kNoReusePort, ssl);
 	server.start();
 	loop.loop();
 }

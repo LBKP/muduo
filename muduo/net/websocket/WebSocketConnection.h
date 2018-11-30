@@ -8,10 +8,7 @@ namespace muduo::net
 class Buffer;
 namespace wss
 {
-enum class WebSocketState : char;
-enum Opcode : char;
-struct WebSocketHeader;
-typedef std::shared_ptr<WebSocketHeader> WebSocketHeaderPtr;
+
 class WebSocketConnection : public TcpConnection
 {
 public:

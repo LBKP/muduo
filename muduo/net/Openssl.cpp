@@ -5,9 +5,8 @@ namespace muduo
 namespace net
 {
 ssl::SslServerAttributes::SslServerAttributes()
-	: keyPath(), keyType(0), certificatePath(), certificateType(0)
-{
-}
+    : keyPath(), keyType(0), certificatePath(), certificateType(0), ctx(nullptr)
+	{}
 ssl::SslServerAttributes::~SslServerAttributes()
 {
 	if (ctx)
@@ -58,8 +57,8 @@ string ssl::sslSha1(const string & str)
 	{
 		sprintf(&strTmpHex[i * 2], "%02x", static_cast<unsigned int>(szSHA1[i]));
 	}
-	LOG_INFO << str << "       sha1     " << strTmpHex;
-	return string(reinterpret_cast<char*>(szSHA1), SHA_DIGEST_LENGTH);
+        LOG_DEBUG << str << "       sha1     " << strTmpHex;
+        return string(reinterpret_cast<char*>(szSHA1), SHA_DIGEST_LENGTH);
 }
 
 string ssl::sslBase64Encode(const string & str)
@@ -78,7 +77,7 @@ string ssl::sslBase64Encode(const string & str)
 	BIO_get_mem_ptr(bio, &bufptr);
 	string retStr = string(bufptr->data, bufptr->length);
 	BIO_free_all(bio);
-	LOG_INFO << str << "       base64     " << retStr;
+	LOG_DEBUG << str << "       base64     " << retStr;
 	return retStr;
 }
 
