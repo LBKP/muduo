@@ -115,6 +115,20 @@ Logger::Impl::Impl(LogLevel level, int savedErrno, const SourceFile& file, int l
     line_(line),
     basename_(file)
 {
+  if (level == LogLevel::FATAL)
+  {
+    stream_ << "\033[30,47m";
+  } else if (level == LogLevel::ERROR) {
+    stream_ << "\033[31m";
+  } else if (level == LogLevel::WARN) {
+    stream_ << "\033[33m";
+  } else if (level == LogLevel::INFO) {
+    stream_ << "\033[37m";
+  } else if (level == LogLevel::DEBUG) {
+    stream_ << "\033[36m";
+  } else if (level == LogLevel::TRACE) {
+    stream_ << "\033[34m";
+  }
   formatTime();
   CurrentThread::tid();
   stream_ << T(CurrentThread::tidString(), CurrentThread::tidStringLength());
@@ -163,9 +177,9 @@ void Logger::Impl::formatTime()
   }
 }
 
-void Logger::Impl::finish()
+void Logger::Impl::finish() 
 {
-  stream_ << " - " << basename_ << ':' << line_ << '\n';
+  stream_ << " - " << basename_ << ':' << line_ << "\033[0m" << '\n';
 }
 
 Logger::Logger(SourceFile file, int line)
@@ -192,7 +206,7 @@ Logger::Logger(SourceFile file, int line, bool toAbort)
 Logger::~Logger()
 {
   impl_.finish();
-  const LogStream::Buffer& buf(stream().buffer());
+  const LogStream::Buffer &buf(stream().buffer());
   g_output(buf.data(), buf.length());
   if (impl_.level_ == FATAL)
   {
