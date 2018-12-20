@@ -19,8 +19,6 @@ public:
 		const InetAddress& peerAddr,
 		ssl::sslAttrivutesPtr sslAttr = ssl::sslAttrivutesPtr());
 	virtual ~WebSocketConnection();
-	virtual bool connected() const;
-	virtual bool disconnected() const;
 
 	// void send
 	virtual void send(const void* message, int len);

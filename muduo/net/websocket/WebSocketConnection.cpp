@@ -25,16 +25,6 @@ WebSocketConnection::~WebSocketConnection()
 		<< " fd=" << channel_->fd();
 }
 
-bool WebSocketConnection::connected() const
-{
-	return state_ >= WebSocketState::kConnectionEstablished;
-}
-
-bool WebSocketConnection::disconnected() const
-{
-	return state_ < WebSocketState::kConnectionEstablished;
-}
-
 void WebSocketConnection::send(const void *data, int len)
 {
 	uint8_t payloadExternBytes, payload;
@@ -154,7 +144,7 @@ void WebSocketConnection::handleRead(Timestamp receiveTime)
 void WebSocketConnection::connectEstablished()
 {
 	loop_->assertInLoopThread();
-	setState(kConnected);
+	TcpConnection::setState(kConnected);
 	channel_->tie(shared_from_this());
 	channel_->enableReading();
 }

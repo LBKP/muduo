@@ -63,10 +63,10 @@ public:
 	const InetAddress& peerAddress() const {
 		return peerAddr_;
 	}
-	virtual bool connected() const {
+	bool connected() const {
 		return state_ == kConnected;
 	}
-	virtual bool disconnected() const {
+	bool disconnected() const {
 		return state_ == kDisconnected;
 	}
 	// return true if success.
