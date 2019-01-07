@@ -22,6 +22,10 @@ public:
 					TcpServer::Option option = TcpServer::kNoReusePort,
 					ssl::sslAttrivutesPtr sslAttr = ssl::sslAttrivutesPtr());
 	virtual ~WebSocketServer();
+	void setOpcode(Opcode frame)
+	{
+		frame_ = frame;
+	}
 
 private:
 	virtual TcpConnectionPtr createConnectiong(EventLoop* ioLoop, 
@@ -29,10 +33,7 @@ private:
 											   int sockfd,
 											   const InetAddress &localAddr,
 											   const InetAddress &peerAddr);
-	void setOpcode(Opcode frame)
-	{
-		frame_ = frame;
-	}
+	
 	static void defaultOnMessageCallback(TcpConnectionPtr websocket, Buffer *buf, Timestamp receiveTime);
 private:
 	//openssl is open
